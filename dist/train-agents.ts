@@ -18,7 +18,7 @@ type MsgKey =
   | "reviewNeedTui" | "noProposal" | "skipRejected" | "externalModified" | "applyFailRestored"
   | "wroteEdits" | "noneAccepted" | "statusOut" | "cmdError" | "noSessionsThisRound" | "usage"
   | "footerSince" | "footerInst" | "footerReady" | "footerElapsed" | "footerFollowed"
-  | "footerViolated" | "footerBuckets" | "footerDone" | "stepCollect" | "stepLoss"
+  | "footerViolated" | "footerBuckets" | "footerDone" | "stepCollect" | "stepLoss" | "analyzeSummary"
   | "evTitle" | "evFile" | "evCounts" | "evRules" | "evNoRules" | "evBuckets" | "evNoBuckets"
   | "evBucketLine" | "evFollowViol" | "evNotVerbatim"
   | "propTitle" | "propBudget" | "propNoEdits" | "propNoEditsTier2" | "propEvidence" | "reviewNowPrompt" | "reviewNowBody" | "proposalSaved" | "nextStepLookPrompt" | "nextStepLookBody" | "nextStepWait" | "proposeWorking"
@@ -66,6 +66,7 @@ const ZH: Record<MsgKey, string> = {
   footerDone: "已完成 · 耗时 {0}s",
   stepCollect: "收集样本",
   stepLoss: "计算损失",
+  analyzeSummary: "分析完成：{0} 会话 · ✓ {1} 遵守 · ✗ {2} 违反 · ◆ {3} 候选桶",
   evTitle: "# AGENTS.md 取证摘要（train-agents）",
   evFile: "文件：{0} · {1} / {2} tok · {3} 会话纳入",
   evCounts: "证据：✓ {0} 条被遵守 · ✗ {1} 条被违反 · ◆ {2} 个候选桶 · {3} 条未触及",
@@ -158,6 +159,7 @@ const EN: Record<MsgKey, string> = {
   footerDone: "done · elapsed {0}s",
   stepCollect: "collect samples",
   stepLoss: "calculate loss",
+  analyzeSummary: "Analysis done: {0} sessions · ✓ {1} followed · ✗ {2} violated · ◆ {3} candidate buckets",
   evTitle: "# AGENTS.md Evidence Summary (train-agents)",
   evFile: "File: {0} · {1} / {2} tok · {3} sessions included",
   evCounts: "Evidence: ✓ {0} followed · ✗ {1} violated · ◆ {2} candidate buckets · {3} untouched",
@@ -1077,6 +1079,7 @@ async function runAnalyze(ctx: ExtensionCommandContext, silent = false) {
   footer.stop(ctx);
   ctx.ui.notify(t("analysisDone", analyzed, skipped, failed, reused), "info");
   if (!silent) printEvidence(ctx, fold, primary, tokens, cfg);
+  else emit(ctx, t("analyzeSummary", analyzed, fold.totals.positive, fold.totals.negative, fold.totals.gapClusters));
   return fold;
 }
 
@@ -1239,7 +1242,7 @@ async function runReview(ctx: ExtensionCommandContext) {
     }
   }
   saveRejections(ctx.cwd, rej);
-  if (accepted.length === 0) { ctx.ui.notify(t("noneAccepted"), "info"); return; }
+  if (accepted.length === 0) { ctx.ui.notify(t("noneAccepted"), "info"); emit(ctx, t("noneAccepted")); return; }
 
   const backupPath = join(DATA_DIR, `${cwdHash(ctx.cwd)}.backup-${Date.now()}.bak`);
   copyFileSync(primary, backupPath);
@@ -1261,6 +1264,7 @@ async function runReview(ctx: ExtensionCommandContext) {
     while (backups.length > 5) { try { unlinkSync(join(DATA_DIR, backups.shift()!)); } catch { } }
   } catch { }
   ctx.ui.notify(t("wroteEdits", accepted.length, primary, backupPath), "info");
+  emit(ctx, t("wroteEdits", accepted.length, primary, backupPath));
   const st = loadState(ctx.cwd); st.analyzed = {}; st.evidence = []; saveState(ctx.cwd, st);
 }
 

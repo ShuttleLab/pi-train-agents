@@ -340,6 +340,7 @@ async function runAnalyze(ctx: ExtensionCommandContext, silent = false) {
   footer.stop(ctx);
   ctx.ui.notify(t("analysisDone", analyzed, skipped, failed, reused), "info");
   if (!silent) printEvidence(ctx, fold, primary, tokens, cfg);
+  else emit(ctx, t("analyzeSummary", analyzed, fold.totals.positive, fold.totals.negative, fold.totals.gapClusters));
   return fold;
 }
 
@@ -502,7 +503,7 @@ async function runReview(ctx: ExtensionCommandContext) {
     }
   }
   saveRejections(ctx.cwd, rej);
-  if (accepted.length === 0) { ctx.ui.notify(t("noneAccepted"), "info"); return; }
+  if (accepted.length === 0) { ctx.ui.notify(t("noneAccepted"), "info"); emit(ctx, t("noneAccepted")); return; }
 
   const backupPath = join(DATA_DIR, `${cwdHash(ctx.cwd)}.backup-${Date.now()}.bak`);
   copyFileSync(primary, backupPath);
@@ -524,6 +525,7 @@ async function runReview(ctx: ExtensionCommandContext) {
     while (backups.length > 5) { try { unlinkSync(join(DATA_DIR, backups.shift()!)); } catch { } }
   } catch { }
   ctx.ui.notify(t("wroteEdits", accepted.length, primary, backupPath), "info");
+  emit(ctx, t("wroteEdits", accepted.length, primary, backupPath));
   const st = loadState(ctx.cwd); st.analyzed = {}; st.evidence = []; saveState(ctx.cwd, st);
 }
 

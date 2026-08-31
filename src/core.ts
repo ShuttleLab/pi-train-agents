@@ -14,7 +14,7 @@ export type MsgKey =
   | "reviewNeedTui" | "noProposal" | "skipRejected" | "externalModified" | "applyFailRestored"
   | "wroteEdits" | "noneAccepted" | "statusOut" | "cmdError" | "noSessionsThisRound" | "usage"
   | "footerSince" | "footerInst" | "footerReady" | "footerElapsed" | "footerFollowed"
-  | "footerViolated" | "footerBuckets" | "footerDone" | "stepCollect" | "stepLoss"
+  | "footerViolated" | "footerBuckets" | "footerDone" | "stepCollect" | "stepLoss" | "analyzeSummary"
   | "evTitle" | "evFile" | "evCounts" | "evRules" | "evNoRules" | "evBuckets" | "evNoBuckets"
   | "evBucketLine" | "evFollowViol" | "evNotVerbatim"
   | "propTitle" | "propBudget" | "propNoEdits" | "propNoEditsTier2" | "propEvidence" | "reviewNowPrompt" | "reviewNowBody" | "proposalSaved" | "nextStepLookPrompt" | "nextStepLookBody" | "nextStepWait" | "proposeWorking"
@@ -62,6 +62,7 @@ const ZH: Record<MsgKey, string> = {
   footerDone: "已完成 · 耗时 {0}s",
   stepCollect: "收集样本",
   stepLoss: "计算损失",
+  analyzeSummary: "分析完成：{0} 会话 · ✓ {1} 遵守 · ✗ {2} 违反 · ◆ {3} 候选桶",
   evTitle: "# AGENTS.md 取证摘要（train-agents）",
   evFile: "文件：{0} · {1} / {2} tok · {3} 会话纳入",
   evCounts: "证据：✓ {0} 条被遵守 · ✗ {1} 条被违反 · ◆ {2} 个候选桶 · {3} 条未触及",
@@ -154,6 +155,7 @@ const EN: Record<MsgKey, string> = {
   footerDone: "done · elapsed {0}s",
   stepCollect: "collect samples",
   stepLoss: "calculate loss",
+  analyzeSummary: "Analysis done: {0} sessions · ✓ {1} followed · ✗ {2} violated · ◆ {3} candidate buckets",
   evTitle: "# AGENTS.md Evidence Summary (train-agents)",
   evFile: "File: {0} · {1} / {2} tok · {3} sessions included",
   evCounts: "Evidence: ✓ {0} followed · ✗ {1} violated · ◆ {2} candidate buckets · {3} untouched",
