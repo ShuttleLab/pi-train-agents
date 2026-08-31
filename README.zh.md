@@ -2,6 +2,10 @@
 
 [English](./README.md) · **中文**
 
+[![npm version](https://img.shields.io/npm/v/pi-train-agents)](https://www.npmjs.com/package/pi-train-agents)
+[![pi package](https://img.shields.io/badge/pi-package-2ea7a7)](https://pi.dev/packages/pi-train-agents)
+[![license](https://img.shields.io/npm/l/pi-train-agents)](./LICENSE)
+
 > 把项目级的 `AGENTS.md` 当成一个有大小限制的模型，用你在这个项目里真实跑过的 Pi 会话记录作为训练数据，定期做"反向传播"式修订：找证据、批量验证、小步修改、留预算、人来把关。
 
 

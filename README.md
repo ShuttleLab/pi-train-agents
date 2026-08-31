@@ -2,6 +2,10 @@
 
 **English** · [中文](./README.zh.md)
 
+[![npm version](https://img.shields.io/npm/v/pi-train-agents)](https://www.npmjs.com/package/pi-train-agents)
+[![pi package](https://img.shields.io/badge/pi-package-2ea7a7)](https://pi.dev/packages/pi-train-agents)
+[![license](https://img.shields.io/npm/l/pi-train-agents)](./LICENSE)
+
 > Treat your project-level `AGENTS.md` as a size-budgeted model, and train it on the Pi sessions that actually ran in the project — a "backward pass" done right: evidence first, batch before update, small steps, a budget, and a human gate as the only write path.
 
 
