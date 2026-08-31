@@ -873,6 +873,13 @@ function bar(pct: number, width = 24): string {
   const cells = Math.round(Math.min(1, pct) * width);
   return "▰".repeat(cells) + "▱".repeat(width - cells);
 }
+/** 进度条分色渲染：已用=accent，剩余=dim，才能看出用了多少 */
+function bar2(t: any, pct: number, width = 24): string {
+  const cells = Math.round(Math.min(1, pct) * width);
+  const filled = "▰".repeat(cells), empty = "▱".repeat(width - cells);
+  if (pct > 90) return t.fg("warning", filled) + t.fg("dim", empty);
+  return t.fg("accent", filled) + t.fg("dim", empty);
+}
 
 let currentFooter: any = null;
 
@@ -905,7 +912,7 @@ class Footer {
           : st.status === "doing" ? tm.fg("accent", spin()) + " " + tm.bold(st.name)
           : tm.fg("dim", "○ " + st.name)
         ).join("   ");
-        const barColor = pct > 90 ? tm.fg("warning", bar(pct)) : tm.fg("dim", bar(pct));
+        const barColor = bar2(tm, pct);
         const budgetColor = pct > 90 ? tm.fg("warning", String(pct) + "%") : tm.fg("dim", String(pct) + "%");
         return [
           tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${s.repo} · ${t("footerSince")} ${s.since}`),
@@ -927,7 +934,7 @@ class Footer {
     ctx.ui.setFooter((_tui, theme) => ({
       render: (width: number) => {
         const tm = theme;
-        const barColor = pct > 90 ? tm.fg("warning", bar(pct)) : tm.fg("dim", bar(pct));
+        const barColor = bar2(tm, pct);
         return [
           tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${s.repo} · ${t("footerDone", elapsed)}`),
           `AGENTS.md ${barColor} ${tm.bold(s.cur.toLocaleString())} / ${s.cap.toLocaleString()} tok`,
@@ -953,7 +960,7 @@ function startProposeFooter(ctx: ExtensionCommandContext, o: { repo: string; tok
     if (stopped) return;
     ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => {
       const tm = theme;
-      const barColor = pct > 90 ? tm.fg("warning", bar(pct)) : tm.fg("dim", bar(pct));
+      const barColor = bar2(tm, pct);
       return [
         tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${o.repo}`),
         `AGENTS.md ${barColor} ${tm.bold(o.tokens.toLocaleString())} / ${o.cap.toLocaleString()} tok · ${o.units} ${t("footerInst", pct + "%")}`,
