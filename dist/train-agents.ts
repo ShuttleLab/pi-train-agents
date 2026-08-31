@@ -21,7 +21,7 @@ type MsgKey =
   | "footerViolated" | "footerBuckets" | "footerDone" | "stepCollect" | "stepLoss"
   | "evTitle" | "evFile" | "evCounts" | "evRules" | "evNoRules" | "evBuckets" | "evNoBuckets"
   | "evBucketLine" | "evFollowViol" | "evNotVerbatim"
-  | "propTitle" | "propBudget" | "propNoEdits" | "propNoEditsTier2" | "propEvidence"
+  | "propTitle" | "propBudget" | "propNoEdits" | "propNoEditsTier2" | "propEvidence" | "reviewNowPrompt" | "reviewNowBody" | "proposalSaved" | "nextStepLookPrompt" | "nextStepLookBody" | "nextStepWait"
   | "stTitle" | "stMemory" | "stAnalyzed" | "stProposal" | "stDataFiles" | "stConfigTitle"
   | "stHConfig" | "stHValue" | "stHMeaning" | "stHAnalog" | "stRowMinGap" | "stRowMaxEdits"
   | "stRowSince" | "stRowAnalysis" | "stRowSynthesis" | "stRowJobs" | "stAboutModel" | "stHowToEdit"
@@ -81,6 +81,12 @@ const ZH: Record<MsgKey, string> = {
   propNoEdits: "（证据未达到阈值，本轮无提案）",
   propNoEditsTier2: "（证据通过了闸门，但 tier2 判断候选观察不是同一问题，未提出修改）",
   propEvidence: "证据({0}): {1}",
+  reviewNowPrompt: "提案已生成，是否立即 review？",
+  reviewNowBody: "将逐条展示编辑，你接受或拒绝；拒绝的会被记住，除非有新证据不再重复提。",
+  proposalSaved: "提案已保存到数据目录，用 /train-agents review 随时审核",
+  nextStepLookPrompt: "未生成提案，是否查看取证明细（analyze）？",
+  nextStepLookBody: "看各规则被遵守/违反、以及候选桶的明细，判断是语料不足还是确实没有可收敛的问题。",
+  nextStepWait: "继续正常干活攒语料即可；同一问题在 ≥2 个会话复现后，add 才会自然出现。",
   stTitle: "# train-agents 状态",
   stMemory: "记忆文件: {0} · {1} / {2} tok · 预算 {3}%",
   stAnalyzed: "已分析会话: {0} · 证据记录: {1} · gap ledger: {2}",
@@ -166,6 +172,12 @@ const EN: Record<MsgKey, string> = {
   propNoEdits: "(evidence below threshold, no proposal this round)",
   propNoEditsTier2: "(evidence passed the gate, but tier2 judged the candidate observations are not the same problem; no edits proposed)",
   propEvidence: "evidence({0}): {1}",
+  reviewNowPrompt: "Proposal generated. Review now?",
+  reviewNowBody: "You'll review each edit (accept/reject); rejected ones are remembered and not re-proposed without new evidence.",
+  proposalSaved: "Proposal saved to the data directory. Run /train-agents review anytime.",
+  nextStepLookPrompt: "No proposal generated. View the evidence summary (analyze)?",
+  nextStepLookBody: "See which rules were followed/violated and the candidate buckets, to tell whether it is thin corpus or genuinely nothing to converge on.",
+  nextStepWait: "Keep working to accumulate sessions; the same problem recurring in ≥2 sessions is required for an add to appear.",
   stTitle: "# train-agents status",
   stMemory: "Memory file: {0} · {1} / {2} tok · budget {3}%",
   stAnalyzed: "Analyzed sessions: {0} · evidence records: {1} · gap ledger: {2}",
@@ -1108,6 +1120,14 @@ async function runPropose(ctx: ExtensionCommandContext) {
     const msg = hasAny ? t("propNoEditsTier2") : t("propNoEdits");
     ctx.ui.notify(msg, "info");
     emit(ctx, `# ${t("propTitle")}\n${msg}`);
+    // 交互式下一步：无提案时也给出引导
+    if (ctx.hasUI) {
+      const look = await ctx.ui.confirm(t("nextStepLookPrompt"), t("nextStepLookBody"));
+      if (look) { await runAnalyze(ctx, false); }
+      else { ctx.ui.notify(t("nextStepWait"), "info"); }
+    } else {
+      ctx.ui.notify(t("nextStepWait"), "info");
+    }
     return;
   }
   const proposal = {
@@ -1119,6 +1139,12 @@ async function runPropose(ctx: ExtensionCommandContext) {
   ensureDir(); writeFileSync(propPath(ctx.cwd), JSON.stringify(proposal, null, 2));
   ctx.ui.notify(t("proposalDone", proposal.edits.length), "info");
   printProposal(ctx, proposal);
+  // 交互式下一步：TUI 且提案非空时，弹出确认是否立即 review（手动命令也能得到下一步引导）
+  if (ctx.hasUI && proposal.edits.length > 0) {
+    const go = await ctx.ui.confirm(t("reviewNowPrompt"), t("reviewNowBody"));
+    if (go) { await runReview(ctx); }
+    else { ctx.ui.notify(t("proposalSaved"), "info"); }
+  }
 }
 
 function printProposal(ctx: ExtensionCommandContext, proposal: any) {
