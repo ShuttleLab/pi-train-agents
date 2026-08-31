@@ -17,7 +17,7 @@ Two install modes — pick per purpose:
 **As a dev checkout (this repo):**
 - `npm run build` — bundle `src/` into a self-contained `dist/train-agents.ts` (syntax self-check). **Run this after every `src/` change.**
 - `npm run test` — pure-function regression tests (`node --test` on `tests/*.test.ts`, 23 cases).
-- `npm run deploy` — copy `dist/` to `~/.pi/agent/extensions/` (for a non-packaged install; if the install is a **symlink** to `dist/`, `build` alone is enough — do **not** run `deploy`, it would replace the symlink with a plain copy).
+- `npm run deploy` — copy `dist/` to `~/.pi/agent/extensions/` (for a **non-packaged** manual install only). If you installed via **`pi install npm:pi-train-agents`**, do **not** run `deploy` — it would add a duplicate local copy and pi would load two `/train-agents` commands (`:1`/`:2`). If your install is a **symlink** to `dist/`, `build` alone is enough and `deploy` would replace the symlink with a copy. Prefer `pi update npm:pi-train-agents` to refresh an installed package.
 
 **In Pi:** `/train-agents` (one-shot full pass), `/train-agents analyze|propose|review|status`; after a fresh `npm run build`, `/reload` hot-reloads instead of restarting pi.
 
