@@ -207,6 +207,29 @@ function emit(ctx: ExtensionCommandContext, text: string, pi?: any) {
   } else { console.log(text); }
 }
 
+// ── 生成提案中的动画 footer（保留摘要，下加转圈状态，避免误判卡死）──
+function startProposeFooter(ctx: ExtensionCommandContext, o: { repo: string; tokens: number; cap: number; units: number; pos: number; neg: number; gaps: number }) {
+  if (ctx.mode !== "tui") return () => {};
+  let stopped = false;
+  const pct = o.cap ? Math.round((o.tokens / o.cap) * 100) : 0;
+  const paint = () => {
+    if (stopped) return;
+    ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => {
+      const tm = theme;
+      const barColor = pct > 90 ? tm.fg("warning", bar(pct)) : tm.fg("dim", bar(pct));
+      return [
+        tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${o.repo}`),
+        `AGENTS.md ${barColor} ${tm.bold(o.tokens.toLocaleString())} / ${o.cap.toLocaleString()} tok · ${o.units} ${t("footerInst", pct + "%")}`,
+        `  ${tm.fg("success", "✓ " + o.pos + " " + t("footerFollowed"))}   ${tm.fg("error", "✗ " + o.neg + " " + t("footerViolated"))}   ${tm.fg("warning", "◆ " + o.gaps + " " + t("footerBuckets"))}`,
+        tm.fg("accent", "  " + spin() + " " + t("proposeWorking")),
+      ].map((l) => (l.length > width ? l.slice(0, width - 1) + "…" : l));
+    }, invalidate: () => {} }));
+  };
+  paint();
+  const timer = setInterval(paint, 90);
+  return () => { stopped = true; clearInterval(timer); };
+}
+
 // ── 命令实现 ──────────────────────────────────────────────────────────────────
 async function runAnalyze(ctx: ExtensionCommandContext, silent = false) {
   const cfg = loadConfig();
@@ -360,32 +383,22 @@ async function runPropose(ctx: ExtensionCommandContext) {
   );
   const realSources = new Set(st.evidence.map((r: any) => r.source).filter(Boolean));
   const prompt = buildSynthesisPrompt(fold, memText, cfg.budgetTokens, [...realSources], cfg.minGapEvidence, lang);
-  // 生成提案中：保留 analyze 摘要（预算条+计数），再加一行“生成中”状态，避免误导成 done 0s
-  if (ctx.mode === "tui") {
-    const pct = cfg.budgetTokens ? Math.round((tokens / cfg.budgetTokens) * 100) : 0;
-    ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => {
-      const tm = theme;
-      const barColor = pct > 90 ? tm.fg("warning", bar(pct)) : tm.fg("dim", bar(pct));
-      return [
-        tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${ctx.cwd.split("/").pop() || ctx.cwd} · ` + t("proposeWorking")),
-        `AGENTS.md ${barColor} ${tm.bold(tokens.toLocaleString())} / ${cfg.budgetTokens.toLocaleString()} tok · ${units.length} ` + t("footerInst", pct + "%"),
-        `  ${tm.fg("success", "✓ " + fold.totals.positive + " " + t("footerFollowed"))}   ${tm.fg("error", "✗ " + fold.totals.negative + " " + t("footerViolated"))}   ${tm.fg("warning", "◆ " + fold.totals.gapClusters + " " + t("footerBuckets"))}`,
-      ].map((l) => (l.length > width ? l.slice(0, width - 1) + "…" : l));
-    }, invalidate: () => {} }));
-  }
+  // 生成提案中：保留 analyze 摘要（预算条+计数），下方加【转圈】状态，避免误判卡死
+  const stopPropose = startProposeFooter(ctx, { repo: ctx.cwd.split("/").pop() || ctx.cwd, tokens, cap: cfg.budgetTokens, units: units.length, pos: fold.totals.positive, neg: fold.totals.negative, gaps: fold.totals.gapClusters });
   let json: any = null, lastViolations: string[] = [];
   for (let attempt = 0; attempt < 2; attempt++) {
     let p = prompt;
     if (attempt === 1) p += `\n\nviolations:\n- ` + lastViolations.join("\n- ");
     const out = await callModel(ctx, cfg, "synthesis", p);
     json = extractJson(out);
-    if (!json) { ctx.ui.notify(t("synthParseFail"), "error"); return; }
+    if (!json) { stopPropose(); ctx.ui.notify(t("synthParseFail"), "error"); return; }
     const v = validateProposal(json.edits || [], memText, tokens, cfg, allQuotes, realSources);
     if (v.ok) break;
     lastViolations = v.violations;
     if (attempt === 0) { ctx.ui.notify(t("gateRetry"), "warning"); continue; }
-    ctx.ui.notify(t("gateFailTwice", v.violations.join("; ")), "error"); return;
+    stopPropose(); ctx.ui.notify(t("gateFailTwice", v.violations.join("; ")), "error"); return;
   }
+  stopPropose();
 
   const edits = (json.edits || []).map((e: any, i: number) => {
     const id = e.id || `e${i + 1}`;
