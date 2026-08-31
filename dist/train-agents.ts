@@ -21,7 +21,7 @@ type MsgKey =
   | "footerViolated" | "footerBuckets" | "footerDone" | "stepCollect" | "stepLoss"
   | "evTitle" | "evFile" | "evCounts" | "evRules" | "evNoRules" | "evBuckets" | "evNoBuckets"
   | "evBucketLine" | "evFollowViol" | "evNotVerbatim"
-  | "propTitle" | "propBudget" | "propNoEdits" | "propNoEditsTier2" | "propEvidence" | "reviewNowPrompt" | "reviewNowBody" | "proposalSaved" | "nextStepLookPrompt" | "nextStepLookBody" | "nextStepWait"
+  | "propTitle" | "propBudget" | "propNoEdits" | "propNoEditsTier2" | "propEvidence" | "reviewNowPrompt" | "reviewNowBody" | "proposalSaved" | "nextStepLookPrompt" | "nextStepLookBody" | "nextStepWait" | "proposeWorking"
   | "stTitle" | "stMemory" | "stAnalyzed" | "stProposal" | "stDataFiles" | "stConfigTitle"
   | "stHConfig" | "stHValue" | "stHMeaning" | "stHAnalog" | "stRowMinGap" | "stRowMaxEdits"
   | "stRowSince" | "stRowAnalysis" | "stRowSynthesis" | "stRowJobs" | "stAboutModel" | "stHowToEdit"
@@ -87,6 +87,7 @@ const ZH: Record<MsgKey, string> = {
   nextStepLookPrompt: "未生成提案，是否查看取证明细（analyze）？",
   nextStepLookBody: "看各规则被遵守/违反、以及候选桶的明细，判断是语料不足还是确实没有可收敛的问题。",
   nextStepWait: "继续正常干活攒语料即可；同一问题在 ≥2 个会话复现后，add 才会自然出现。",
+  proposeWorking: "正在生成提案…（调用 tier2 强模型，通常需数十秒，请稍候）",
   stTitle: "# train-agents 状态",
   stMemory: "记忆文件: {0} · {1} / {2} tok · 预算 {3}%",
   stAnalyzed: "已分析会话: {0} · 证据记录: {1} · gap ledger: {2}",
@@ -178,6 +179,7 @@ const EN: Record<MsgKey, string> = {
   nextStepLookPrompt: "No proposal generated. View the evidence summary (analyze)?",
   nextStepLookBody: "See which rules were followed/violated and the candidate buckets, to tell whether it is thin corpus or genuinely nothing to converge on.",
   nextStepWait: "Keep working to accumulate sessions; the same problem recurring in ≥2 sessions is required for an add to appear.",
+  proposeWorking: "Generating proposal… (tier2 model, usually tens of seconds; please wait)",
   stTitle: "# train-agents status",
   stMemory: "Memory file: {0} · {1} / {2} tok · budget {3}%",
   stAnalyzed: "Analyzed sessions: {0} · evidence records: {1} · gap ledger: {2}",
@@ -1095,6 +1097,10 @@ async function runPropose(ctx: ExtensionCommandContext) {
   );
   const realSources = new Set(st.evidence.map((r: any) => r.source).filter(Boolean));
   const prompt = buildSynthesisPrompt(fold, memText, cfg.budgetTokens, [...realSources], cfg.minGapEvidence, lang);
+  // 生成提案中：覆盖 analyze 的 done footer，避免“0s”却还在跑合成模型的误导
+  if (ctx.mode === "tui") {
+    ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => [theme.fg("accent", "◆ " + t("proposeWorking"))], invalidate: () => {} }));
+  }
   let json: any = null, lastViolations: string[] = [];
   for (let attempt = 0; attempt < 2; attempt++) {
     let p = prompt;
@@ -1119,6 +1125,7 @@ async function runPropose(ctx: ExtensionCommandContext) {
     const hasAny = fold.totals.positive + fold.totals.negative + fold.gaps.length > 0;
     const msg = hasAny ? t("propNoEditsTier2") : t("propNoEdits");
     ctx.ui.notify(msg, "info");
+    if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
     emit(ctx, `# ${t("propTitle")}\n${msg}`);
     // 交互式下一步：无提案时也给出引导
     if (ctx.hasUI) {
@@ -1139,6 +1146,8 @@ async function runPropose(ctx: ExtensionCommandContext) {
   ensureDir(); writeFileSync(propPath(ctx.cwd), JSON.stringify(proposal, null, 2));
   ctx.ui.notify(t("proposalDone", proposal.edits.length), "info");
   printProposal(ctx, proposal);
+  // 清掉“生成提案中”footer，再弹下一步确认（避免对话框叠加在进度文本上）
+  if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
   // 交互式下一步：TUI 且提案非空时，弹出确认是否立即 review（手动命令也能得到下一步引导）
   if (ctx.hasUI && proposal.edits.length > 0) {
     const go = await ctx.ui.confirm(t("reviewNowPrompt"), t("reviewNowBody"));

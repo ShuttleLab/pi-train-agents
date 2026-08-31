@@ -360,6 +360,10 @@ async function runPropose(ctx: ExtensionCommandContext) {
   );
   const realSources = new Set(st.evidence.map((r: any) => r.source).filter(Boolean));
   const prompt = buildSynthesisPrompt(fold, memText, cfg.budgetTokens, [...realSources], cfg.minGapEvidence, lang);
+  // 生成提案中：覆盖 analyze 的 done footer，避免“0s”却还在跑合成模型的误导
+  if (ctx.mode === "tui") {
+    ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => [theme.fg("accent", "◆ " + t("proposeWorking"))], invalidate: () => {} }));
+  }
   let json: any = null, lastViolations: string[] = [];
   for (let attempt = 0; attempt < 2; attempt++) {
     let p = prompt;
@@ -384,6 +388,7 @@ async function runPropose(ctx: ExtensionCommandContext) {
     const hasAny = fold.totals.positive + fold.totals.negative + fold.gaps.length > 0;
     const msg = hasAny ? t("propNoEditsTier2") : t("propNoEdits");
     ctx.ui.notify(msg, "info");
+    if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
     emit(ctx, `# ${t("propTitle")}\n${msg}`);
     // 交互式下一步：无提案时也给出引导
     if (ctx.hasUI) {
@@ -404,6 +409,8 @@ async function runPropose(ctx: ExtensionCommandContext) {
   ensureDir(); writeFileSync(propPath(ctx.cwd), JSON.stringify(proposal, null, 2));
   ctx.ui.notify(t("proposalDone", proposal.edits.length), "info");
   printProposal(ctx, proposal);
+  // 清掉“生成提案中”footer，再弹下一步确认（避免对话框叠加在进度文本上）
+  if (ctx.mode === "tui") ctx.ui.setFooter(undefined);
   // 交互式下一步：TUI 且提案非空时，弹出确认是否立即 review（手动命令也能得到下一步引导）
   if (ctx.hasUI && proposal.edits.length > 0) {
     const go = await ctx.ui.confirm(t("reviewNowPrompt"), t("reviewNowBody"));
