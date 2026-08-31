@@ -360,9 +360,18 @@ async function runPropose(ctx: ExtensionCommandContext) {
   );
   const realSources = new Set(st.evidence.map((r: any) => r.source).filter(Boolean));
   const prompt = buildSynthesisPrompt(fold, memText, cfg.budgetTokens, [...realSources], cfg.minGapEvidence, lang);
-  // 生成提案中：覆盖 analyze 的 done footer，避免“0s”却还在跑合成模型的误导
+  // 生成提案中：保留 analyze 摘要（预算条+计数），再加一行“生成中”状态，避免误导成 done 0s
   if (ctx.mode === "tui") {
-    ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => [theme.fg("accent", "◆ " + t("proposeWorking"))], invalidate: () => {} }));
+    const pct = cfg.budgetTokens ? Math.round((tokens / cfg.budgetTokens) * 100) : 0;
+    ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => {
+      const tm = theme;
+      const barColor = pct > 90 ? tm.fg("warning", bar(pct)) : tm.fg("dim", bar(pct));
+      return [
+        tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${ctx.cwd.split("/").pop() || ctx.cwd} · ` + t("proposeWorking")),
+        `AGENTS.md ${barColor} ${tm.bold(tokens.toLocaleString())} / ${cfg.budgetTokens.toLocaleString()} tok · ${units.length} ` + t("footerInst", pct + "%"),
+        `  ${tm.fg("success", "✓ " + fold.totals.positive + " " + t("footerFollowed"))}   ${tm.fg("error", "✗ " + fold.totals.negative + " " + t("footerViolated"))}   ${tm.fg("warning", "◆ " + fold.totals.gapClusters + " " + t("footerBuckets"))}`,
+      ].map((l) => (l.length > width ? l.slice(0, width - 1) + "…" : l));
+    }, invalidate: () => {} }));
   }
   let json: any = null, lastViolations: string[] = [];
   for (let attempt = 0; attempt < 2; attempt++) {
