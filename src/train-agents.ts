@@ -139,9 +139,9 @@ function bar(pct: number, width = 24): string {
 /** 进度条分色渲染：已用=accent，剩余=dim，才能看出用了多少 */
 function bar2(t: any, pct: number, width = 24): string {
   const cells = Math.round(Math.min(1, pct) * width);
-  const filled = "█".repeat(cells), empty = ".".repeat(width - cells);
-  if (pct > 90) return t.fg("warning", filled) + t.fg("dim", empty);
-  return t.fg("accent", filled) + t.fg("dim", empty);
+  const filled = "#".repeat(cells), empty = ".".repeat(width - cells);
+  if (pct > 90) return t.fg("warning", filled) + empty;
+  return t.fg("accent", filled) + empty;
 }
 
 let currentFooter: any = null;
