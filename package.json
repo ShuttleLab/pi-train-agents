@@ -1,6 +1,6 @@
 {
   "name": "pi-train-agents",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Pi-native extension: gradient descent for your AGENTS.md — evidence-backed, human-gated (inspired by backpass)",
   "type": "module",
   "scripts": {

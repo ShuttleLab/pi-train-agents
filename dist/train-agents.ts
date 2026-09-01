@@ -890,17 +890,6 @@ async function analyzeTranscript(ctx: ExtensionCommandContext, cfg: any, units: 
 // ── Footer 实时进度 ───────────────────────────────────────────────────────────
 const SPIN = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 function spin() { return SPIN[Math.floor(Date.now() / 90) % SPIN.length]; }
-function bar(pct: number, width = 24): string {
-  const cells = Math.round(Math.min(1, pct) * width);
-  return "▰".repeat(cells) + "▱".repeat(width - cells);
-}
-/** 进度条分色渲染：已用=accent，剩余=dim，才能看出用了多少 */
-function bar2(t: any, pct: number, width = 24): string {
-  const cells = Math.round(Math.min(1, pct) * width);
-  const filled = "#".repeat(cells), empty = ".".repeat(width - cells);
-  if (pct > 90) return t.fg("warning", filled) + empty;
-  return t.fg("accent", filled) + empty;
-}
 
 let currentFooter: any = null;
 
@@ -912,7 +901,7 @@ class Footer {
   start(ctx: ExtensionCommandContext, repo: string, since: string, cur: number, cap: number, units: number) {
     this.ctx = ctx; this.active = true; currentFooter = this;
     this.state = { repo, since, cur, cap, units, steps: [], transcripts: "", evidence: { helped: 0, violated: 0, gaps: 0 }, startTime: Date.now() };
-    this.paint(); this.timer = setInterval(() => this.paint(), 200);
+    this.paint(); this.timer = setInterval(() => this.paint(), 80);
   }
   setStep(name: string, status: "todo" | "doing" | "done") {
     const i = this.state.steps.findIndex((s: any) => s.name === name);
@@ -933,11 +922,10 @@ class Footer {
           : st.status === "doing" ? tm.fg("accent", spin()) + " " + tm.bold(st.name)
           : tm.fg("dim", "○ " + st.name)
         ).join("   ");
-        const barColor = bar2(tm, pct);
-        const budgetColor = pct > 90 ? tm.fg("warning", String(pct) + "%") : tm.fg("dim", String(pct) + "%");
+                const budgetColor = pct > 90 ? tm.fg("warning", String(pct) + "%") : tm.fg("dim", String(pct) + "%");
         return [
           tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${s.repo} · ${t("footerSince")} ${s.since}`),
-          `AGENTS.md ${barColor} ${tm.bold(s.cur.toLocaleString())} / ${s.cap.toLocaleString()} tok · ${s.units} ${t("footerInst", pct + "%")}`,
+          `AGENTS.md ${tm.bold(s.cur.toLocaleString())} / ${s.cap.toLocaleString()} tok · ${s.units} ${t("footerInst", pct + "%")}`,
           stepStr || tm.fg("dim", "○ " + t("footerReady")),
           (s.transcripts ? `  ${s.transcripts}` : "") + tm.fg("dim", `  · ${t("footerElapsed", elapsed)}`),
           `  ${tm.fg("success", "✓ " + s.evidence.helped + " " + t("footerFollowed"))}   ${tm.fg("error", "✗ " + s.evidence.violated + " " + t("footerViolated"))}   ${tm.fg("warning", "◆ " + s.evidence.gaps + " " + t("footerBuckets"))}`,
@@ -955,10 +943,9 @@ class Footer {
     ctx.ui.setFooter((_tui, theme) => ({
       render: (width: number) => {
         const tm = theme;
-        const barColor = bar2(tm, pct);
-        return [
+                return [
           tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${s.repo} · ${t("footerDone", elapsed)}`),
-          `AGENTS.md ${barColor} ${tm.bold(s.cur.toLocaleString())} / ${s.cap.toLocaleString()} tok`,
+          `AGENTS.md ${tm.bold(s.cur.toLocaleString())} / ${s.cap.toLocaleString()} tok`,
           `  ${tm.fg("success", "✓ " + s.evidence.helped + " " + t("footerFollowed"))}   ${tm.fg("error", "✗ " + s.evidence.violated + " " + t("footerViolated"))}   ${tm.fg("warning", "◆ " + s.evidence.gaps + " " + t("footerBuckets"))}`,
         ].filter(Boolean).map((l) => (l.length > width ? l.slice(0, width - 1) + "…" : l));
       }, invalidate: () => {},
@@ -981,17 +968,16 @@ function startProposeFooter(ctx: ExtensionCommandContext, o: { repo: string; tok
     if (stopped) return;
     ctx.ui.setFooter((_t, theme) => ({ render: (width: number) => {
       const tm = theme;
-      const barColor = bar2(tm, pct);
-      return [
+            return [
         tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${o.repo}`),
-        `AGENTS.md ${barColor} ${tm.bold(o.tokens.toLocaleString())} / ${o.cap.toLocaleString()} tok · ${o.units} ${t("footerInst", pct + "%")}`,
+        `AGENTS.md ${tm.bold(o.tokens.toLocaleString())} / ${o.cap.toLocaleString()} tok · ${o.units} ${t("footerInst", pct + "%")}`,
         `  ${tm.fg("success", "✓ " + o.pos + " " + t("footerFollowed"))}   ${tm.fg("error", "✗ " + o.neg + " " + t("footerViolated"))}   ${tm.fg("warning", "◆ " + o.gaps + " " + t("footerBuckets"))}`,
         tm.fg("accent", "  " + spin() + " " + t("proposeWorking")),
       ].map((l) => (l.length > width ? l.slice(0, width - 1) + "…" : l));
     }, invalidate: () => {} }));
   };
   paint();
-  const timer = setInterval(paint, 90);
+  const timer = setInterval(paint, 80);
   return () => { stopped = true; clearInterval(timer); };
 }
 
