@@ -543,12 +543,34 @@ function runStatus(ctx: ExtensionCommandContext) {
     ? `"${cfg.analysis.model || "null"}" / "${cfg.synthesis.model || "null"}"`
     : `null (current session model: ${currentModel})`;
   const langLabel = lang === "zh" ? "zh" : "en";
+  const hash = cwdHash(ctx.cwd);
+  const fsize = (p: string) => existsSync(p) ? `${(statSync(p).size / 1024).toFixed(1)}KB` : "—";
+  const sPath = statePath(ctx.cwd), rPath = rejPath(ctx.cwd), pPath = propPath(ctx.cwd);
+  const rejCount = loadRejections(ctx.cwd).length;
+  let backupCount = 0;
+  try {
+    if (existsSync(DATA_DIR)) backupCount = readdirSync(DATA_DIR).filter((f) => f.startsWith(`${hash}.backup-`)).length;
+  } catch { }
+  const propDisp = existsSync(pPath) ? "yes" : "no";
   const lines = [
     t("stTitle"),
     t("stMemory", primary || "(none)", tokens, cfg.budgetTokens, pct),
     t("stAnalyzed", Object.keys(st.analyzed || {}).length, (st.evidence || []).length, (st.gapLedger || []).length),
     t("stProposal", existsSync(propPath(ctx.cwd)) ? `yes (/train-agents review)` : `no`),
+    "",
     t("stDataFiles"),
+    "",
+    `| ${t("stHFile")} | ${t("stHFileWhat")} | ${t("stHFileHow")} |`,
+    `|---|---|---|`,
+    `| ${t("stFileConfig")} |`,
+    `| ${t("stFileState")} |`,
+    `| ${t("stFileProposal")} |`,
+    `| ${t("stFileRej")} |`,
+    `| ${t("stFileBackup")} |`,
+    "",
+    t("stDataNow", hash, fsize(sPath), fsize(rPath), rejCount, propDisp, backupCount),
+    "",
+    t("stDataLifecycle"),
     "",
     `## ${t("stConfigTitle")} (language=${langLabel})`.replace(/^## ##/, "##"),
     "",

@@ -22,6 +22,9 @@ export type MsgKey =
   | "stHConfig" | "stHValue" | "stHMeaning" | "stHAnalog" | "stRowMinGap" | "stRowMaxEdits"
   | "stRowSince" | "stRowAnalysis" | "stRowSynthesis" | "stRowJobs" | "stAboutModel" | "stHowToEdit"
   | "stSave" | "stNoteAdd" | "stNoteSafe" | "stModelNote"
+  | "stHFile" | "stHFileWhat" | "stHFileHow"
+  | "stFileConfig" | "stFileState" | "stFileProposal" | "stFileRej" | "stFileBackup"
+  | "stDataNow" | "stDataLifecycle"
   | "vTooManyEdits" | "vKind" | "vTitle" | "vNoQuote" | "vNoBenchmark" | "vNotTraceable"
   | "vFindNotFound" | "vFindNotUnique" | "vAnchorNotFound" | "vAnchorNotUnique" | "vAddSources" | "vShrink";
 
@@ -89,7 +92,7 @@ const ZH: Record<MsgKey, string> = {
   stMemory: "记忆文件: {0} · {1} / {2} tok · 预算 {3}%",
   stAnalyzed: "已分析会话: {0} · 证据记录: {1} · gap ledger: {2}",
   stProposal: "待审核提案: {0}",
-  stDataFiles: "数据文件: ~/.pi/agent/train-agents/<cwd哈希>.{state,proposal,rejections}.json（项目内无残留；AGENTS.md 变更后旧证据自动失效）",
+  stDataFiles: "数据目录：~/.pi/agent/train-agents/（全部为用户数据，项目内无残留）",
   stConfigTitle: "## 配置项含义（当前值，对齐 backpass）",
   stHConfig: "配置", stHValue: "当前值", stHMeaning: "含义", stHAnalog: "神经网络类比",
   stRowMinGap: "批量阈值：新规则/修改须 ≥{0} 个独立会话指向同一问题。单次会话偏差是噪音",
@@ -104,6 +107,14 @@ const ZH: Record<MsgKey, string> = {
   stNoteAdd: "说明：新增规则(kind=add)依赖跨会话【近重复/强相似】gap 且经 tier2 语义判断 + 真实 source 溯源闸门；完全换词的中文 paraphrase 无法靠字符串相似度聚类，add 可能产不出，必要时可手写。本工具主要产出 rewrite/remove。",
   stNoteSafe: "安全：AGENTS.md 只在 /train-agents review 逐条确认后写入；写入前有版本新鲜度校验 + 时间戳备份（DATA_DIR 保留最近 5 份）；gap/evidence 均需逐字溯源。",
   stModelNote: "> 注：当前默认模型（{0}）的 api 为 {1}，若该模型不支持 effort 分档，两档实际靠 analysis.model / synthesis.model 配置不同模型来区分。",
+  stHFile: "文件", stHFileWhat: "是什么", stHFileHow: "修改 / 清空 / 删除",
+  stFileConfig: "config.json | 全局配置（预算、minGapEvidence、模型、language 等） | 直接编辑即生效；删除后下次运行按默认自动重建",
+  stFileState: "<hash>.state.json | 本项目的分析缓存 + 证据 + gap ledger | 删除/清空 = 下次 analyze 从头重新取证（费 token）；AGENTS.md 变更后旧缓存自动失效",
+  stFileProposal: "<hash>.proposal.json | 待 review 的提案 | 删除 = 放弃本轮提案（需重新 propose）",
+  stFileRej: "<hash>.rejections.json | 拒绝记忆（避免重复提同样建议） | 删除 = 忘掉全部拒绝记录，同类建议可能再次被提出",
+  stFileBackup: "<hash>.backup-*.bak | review 写入前的 AGENTS.md 时间戳备份（自动保留最近 5 份） | 可删旧的；恢复 = 直接拷回覆盖 AGENTS.md",
+  stDataNow: "本项目（哈希 {0}）：state {1} · rejections {2}（{3} 条）· proposal {4} · backups {5} 份；其它项目的文件同目录共存，按 <hash> 前缀区分",
+  stDataLifecycle: "卸载（pi remove）只删包、不删这些用户数据——重装后配置/证据/备份均保留。彻底清理：`rm -rf ~/.pi/agent/train-agents/`（先确认其中 backup 里的 AGENTS.md 备份不再需要）。",
   vTooManyEdits: "编辑数 {0} 超过上限 {1}",
   vKind: "编辑 {0}: kind 必须是 add/remove/rewrite/extract",
   vTitle: "编辑 {0}: 缺少 title",
@@ -197,6 +208,14 @@ const EN: Record<MsgKey, string> = {
   stNoteAdd: "Note: new-rule (kind=add) proposals depend on cross-session near-duplicate/similar gaps, judged semantically by tier2 + real-source traceability gates. Fully rephrased Chinese paraphrases cannot be clustered by string similarity — adds may not be produced; write them by hand when needed. This tool primarily produces rewrite/remove.",
   stNoteSafe: "Safety: AGENTS.md is only written after per-edit confirmation in /train-agents review; a version-freshness check + timestamped backup (last 5 kept in DATA_DIR) run before writing; gaps/evidence must be verbatim-traceable.",
   stModelNote: "> Note: the current default model ({0}) uses api {1}; if it does not support effort tiers, differentiate the two tiers by configuring analysis.model / synthesis.model.",
+  stHFile: "File", stHFileWhat: "What it is", stHFileHow: "Edit / clear / delete",
+  stFileConfig: "config.json | global config (budget, minGapEvidence, models, language, etc.) | edit it and it takes effect; delete → auto re-created with defaults on next run",
+  stFileState: "<hash>.state.json | this project's analysis cache + evidence + gap ledger | delete/clear = next analyze re-collects from scratch (costs tokens); stale entries auto-invalidated when AGENTS.md changes",
+  stFileProposal: "<hash>.proposal.json | proposal awaiting review | delete = discard this proposal (need to propose again)",
+  stFileRej: "<hash>.rejections.json | rejection memory (avoids re-proposing the same edits) | delete = all rejections forgotten, similar edits may be proposed again",
+  stFileBackup: "<hash>.backup-*.bak | timestamped AGENTS.md backup before each review write (last 5 kept) | safe to delete old ones; restore = copy back over AGENTS.md",
+  stDataNow: "This project (hash {0}): state {1} · rejections {2} ({3} entries) · proposal {4} · backups {5}; other projects' files share this dir, distinguished by <hash> prefix",
+  stDataLifecycle: "Uninstalling (pi remove) removes the package only — these user files stay, so config/evidence/backups survive a reinstall. Full cleanup: `rm -rf ~/.pi/agent/train-agents/` (make sure you no longer need the AGENTS.md backups inside).",
   vTooManyEdits: "edit count {0} exceeds cap {1}",
   vKind: "edit {0}: kind must be add/remove/rewrite/extract",
   vTitle: "edit {0}: missing title",
