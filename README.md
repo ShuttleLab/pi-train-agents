@@ -59,11 +59,13 @@ pi install https://github.com/ShuttleLab/pi-train-agents
 
 | Command | What it does |
 |---|---|
-| `/train-agents` | **One-shot full pass**: silent evidence collection + proposal, outputs only the proposal (never writes) |
+| `/train-agents` | **One-shot full pass**: silent evidence collection + proposal. In TUI it then prompts whether to review now (never writes on its own) |
 | `/train-agents analyze` | Evidence only: summary of followed/violated rules and candidate buckets |
-| `/train-agents propose` | Synthesis only: build edits from already-collected evidence |
+| `/train-agents propose` | Synthesis only: build edits from already-collected evidence; prompts an evidence-view / keep-working hint when there is nothing to propose |
 | `/train-agents review` | **The only human write path**: per-edit diff + evidence, accept/reject, accepted ones are written to AGENTS.md |
 | `/train-agents status` | Status + config reference + how to edit |
+
+> **Interactive next step** (TUI mode): after `/train-agents` or `/train-agents propose` finishes, pi shows a dialog — **"Review now?"** when a proposal exists, or **"View the evidence summary?"** when it does not. The live footer animates a spinner + per-session progress, and shows the budget as plain text (`1,407 / 5,000 tok · 28%`). Edits written to `AGENTS.md` follow that file's language; the tool's own UI follows the `language` config.
 
 ### Typical workflow
 

@@ -59,11 +59,13 @@ pi install https://github.com/ShuttleLab/pi-train-agents
 
 | 命令 | 作用 |
 |---|---|
-| `/train-agents` | **一键全流程**：静默取证 + 生成提案，只输出提案（不写文件） |
-| `/train-agents analyze` | 仅取证：输出证据摘要（规则被遵守/违反/空白） |
-| `/train-agents propose` | 仅合成提案：基于已有证据生成修改建议 |
+| `/train-agents` | **一键全流程**：静默取证 + 生成提案；TUI 下随后会询问是否立即 review（不会自行写入） |
+| `/train-agents analyze` | 仅取证：输出证据摘要（规则被遵守/违反/候选桶） |
+| `/train-agents propose` | 仅合成提案：基于已有证据生成修改建议；无提案时提示查看证据/继续攒语料 |
 | `/train-agents review` | **人工审核唯一写入入口**：逐条展示 diff，接受/拒绝，接受的才写入 AGENTS.md |
 | `/train-agents status` | 查看状态 + 配置项含义 + 如何修改 |
+
+> **交互式下一步**（TUI 模式）：`/train-agents` 或 `/train-agents propose` 结束后，pi 会弹出一个对话框——有提案时问 **"是否立即 review？"**，无提案时问 **"是否查看取证明细？"**。实时 footer 有转圈 + 会话进度动画，预算显示为纯文本（`1,407 / 5,000 tok · 28%`）。写入 `AGENTS.md` 的编辑跟随该文件的语言；工具的界面语言跟随 `language` 配置。
 
 ### 典型工作流
 
