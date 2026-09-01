@@ -169,7 +169,7 @@ class Footer {
           tm.fg("accent", "∇ train-agents") + tm.fg("dim", ` · ${s.repo} · ${t("footerSince")} ${s.since}`),
           `AGENTS.md ${tm.bold(s.cur.toLocaleString())} / ${s.cap.toLocaleString()} tok · ${s.units} ${t("footerInst", pct + "%")}`,
           stepStr || tm.fg("dim", "○ " + t("footerReady")),
-          (s.transcripts ? `  ${s.transcripts}` : "") + tm.fg("dim", `  · ${t("footerElapsed", elapsed)}`),
+          (s.transcripts ? `  ${spin()} ${s.transcripts}` : "") + tm.fg("dim", `  · ${t("footerElapsed", elapsed)}`),
           `  ${tm.fg("success", "✓ " + s.evidence.helped + " " + t("footerFollowed"))}   ${tm.fg("error", "✗ " + s.evidence.violated + " " + t("footerViolated"))}   ${tm.fg("warning", "◆ " + s.evidence.gaps + " " + t("footerBuckets"))}`,
         ].filter(Boolean).map((l) => (l.length > width ? l.slice(0, width - 1) + "…" : l));
       }, invalidate: () => {},
@@ -275,7 +275,7 @@ async function runAnalyze(ctx: ExtensionCommandContext, silent = false) {
 
   const worker = async (s: any) => {
     idx++;
-    const label = `${spin()} ${idx}/${worklist.length} ● ${s.path.split("/").pop()}`;
+    const label = `${idx}/${worklist.length} ● ${s.path.split("/").pop()}`;
     footer.setTranscript(label);
     const distilled = await distillSession(s.path);
     if (distilled.userTurns < cfg.minUserTurns) { skipped++; return; }
